@@ -1,0 +1,6 @@
+motion_source,base,v_start,v_end
+data,high jump,Standing,bowling
+data,walk,Standing,drink from mug and transition
+data,sit down and sitting,Standing,drink from mug and transition
+text,Sit,Stand,Argue angrily
+text,Jump,Walk,Walk old

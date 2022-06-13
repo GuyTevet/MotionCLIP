@@ -117,7 +117,7 @@ To reproduce `paper-model` run:
 python -m src.train.train --clip_text_losses cosine --clip_image_losses cosine --pose_rep rot6d \
 --lambda_vel 100 --lambda_rc 100 --lambda_rcxyz 100 \
 --jointstype vertices --batch_size 20 --num_frames 60 --num_layers 8 \
---lr 0.0001 --glob --translation --no-vertstrans --latent_dim 512 --num_epochs 500 --snapshot 10 \
+--lr 0.0001 --glob --translation --no-vertstrans --latent_dim 512 --num_epochs 100 --snapshot 10 \
 --device <GPU DEVICE ID> \
 --datapath ./data/amass_db/amass_30fps_db.pt \
 --folder ./exps/my-paper-model
@@ -128,7 +128,7 @@ To reproduce `classes-model` run:
 python -m src.train.train --clip_text_losses cosine --clip_image_losses cosine --pose_rep rot6d \
 --lambda_vel 95 --lambda_rc 95 --lambda_rcxyz 95 \
 --jointstype vertices --batch_size 20 --num_frames 60 --num_layers 8 \
---lr 0.0001 --glob --translation --no-vertstrans --latent_dim 512 --num_epochs 500 --snapshot 10 \
+--lr 0.0001 --glob --translation --no-vertstrans --latent_dim 512 --num_epochs 200 --snapshot 10 \
 --device <GPU DEVICE ID> \
 --datapath ./data/amass_db/babel_30fps_db.pt \
 --folder ./exps/my-classes-model

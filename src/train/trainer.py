@@ -13,9 +13,6 @@ def convert_models_to_fp32(model):
             p.grad.data = p.grad.data.float()
 
 
-batch_losses_dict = {}
-
-
 def train_or_test(model, optimizer, iterator, device, mode="train"):
     if mode == "train":
         model.train()
@@ -50,20 +47,6 @@ def train_or_test(model, optimizer, iterator, device, mode="train"):
                     batch_losses_dict[key].append(value)
                 else:
                     batch_losses_dict[key] = [value]
-
-            """ TEST THE LOSSES! """
-            if i == 10:
-                # with open("/disk2/briangordon/batch_losses.pkl", "wb") as f:
-                #     pickle.dump(batch_losses_dict, f)
-                # exit()
-                with open("/disk2/briangordon/batch_losses.pkl", "rb") as f:
-                    stored_losses = pickle.load(f)
-                for key, value in losses.items():
-                    if stored_losses[key] != batch_losses_dict[key]:
-                        print(f'Mismatch for loss! {key}')
-                        exit()
-                print('ALL LOSSES ARE GOOD!')
-                exit()
 
             if i == 0:
                 dict_loss = deepcopy(losses)

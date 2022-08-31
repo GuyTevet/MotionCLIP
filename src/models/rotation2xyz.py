@@ -2,8 +2,7 @@ import torch
 import src.utils.rotation_conversions as geometry
 
 from .smpl import SMPL, JOINTSTYPE_ROOT
-# from .get_model import JOINTSTYPES
-JOINTSTYPES = ["a2m", "a2mpl", "smpl", "vibe", "vertices"]
+from src.models.tools.jointstypes import JOINTSTYPES
 
 
 class Rotation2xyz:

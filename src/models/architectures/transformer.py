@@ -68,21 +68,11 @@ class Encoder_TRANSFORMER(nn.Module):
         
         self.input_feats = self.njoints*self.nfeats
 
-        self.normalize_output = kargs.get('normalize_encoder_output', False)
-
-        if self.ablation == "average_encoder":
-            self.mu_layer = nn.Linear(self.latent_dim, self.latent_dim)
-            self.sigma_layer = nn.Linear(self.latent_dim, self.latent_dim)
-        # elif self.ablation == "extra_token":
-        #     self.extra_token = nn.Parameter(torch.randn(1, self.latent_dim))
-        else:
-            self.muQuery = nn.Parameter(torch.randn(self.num_classes, self.latent_dim))
-            self.sigmaQuery = nn.Parameter(torch.randn(self.num_classes, self.latent_dim))
-        
+        self.muQuery = nn.Parameter(torch.randn(1, self.latent_dim))
+        self.sigmaQuery = nn.Parameter(torch.randn(1, self.latent_dim))
         self.skelEmbedding = nn.Linear(self.input_feats, self.latent_dim)
-        
+
         self.sequence_pos_encoder = PositionalEncoding(self.latent_dim, self.dropout)
-        
 
         seqTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.latent_dim,
                                                           nhead=self.num_heads,
@@ -95,12 +85,13 @@ class Encoder_TRANSFORMER(nn.Module):
     def forward(self, batch):
         x, y, mask = batch["x"], batch["y"], batch["mask"]
         bs, njoints, nfeats, nframes = x.shape
-        x = x.permute((3, 0, 1, 2)).reshape(nframes, bs, njoints*nfeats)
+        x = x.permute((3, 0, 1, 2)).reshape(nframes, bs, njoints * nfeats)
 
         # embedding of the skeleton
         x = self.skelEmbedding(x)
 
-        # adding the mu and sigma queries
+        # Blank Y to 0's , no classes in our model, only learned token
+        y = y - y
         xseq = torch.cat((self.muQuery[y][None], self.sigmaQuery[y][None], x), axis=0)
 
         # add positional encoding
@@ -114,9 +105,6 @@ class Encoder_TRANSFORMER(nn.Module):
         final = self.seqTransEncoder(xseq, src_key_padding_mask=~maskseq)
         mu = final[0]
         logvar = final[1]
-
-        if self.normalize_output:
-            mu = mu / mu.norm(dim=-1, keepdim=True)
 
         return {"mu": mu}
 
@@ -150,13 +138,12 @@ class Decoder_TRANSFORMER(nn.Module):
         self.activation = activation
                 
         self.input_feats = self.njoints*self.nfeats
-        self.normalize_decoder_input = kargs.get('normalize_decoder_input', False)
 
         # only for ablation / not used in the final model
         if self.ablation == "zandtime":
             self.ztimelinear = nn.Linear(self.latent_dim + self.num_classes, self.latent_dim)
-        else:
-            self.actionBiases = nn.Parameter(torch.randn(self.num_classes, self.latent_dim))
+
+        self.actionBiases = nn.Parameter(torch.randn(1, self.latent_dim))
 
         # only for ablation / not used in the final model
         if self.ablation == "time_encoding":
@@ -175,7 +162,7 @@ class Decoder_TRANSFORMER(nn.Module):
         self.finallayer = nn.Linear(self.latent_dim, self.input_feats)
         
     def forward(self, batch, use_text_emb=False):
-        z, mask, lengths = batch["z"], batch["mask"], batch["lengths"]
+        z, y, mask, lengths = batch["z"], batch["y"], batch["mask"], batch["lengths"]
         if use_text_emb:
             z = batch["clip_text_emb"]
         latent_dim = z.shape[1]
@@ -194,9 +181,7 @@ class Decoder_TRANSFORMER(nn.Module):
                 # sequence of size 2
                 z = torch.stack((z, self.actionBiases[y]), axis=0)
             else:
-                # shift the latent noise vector to be the action noise
-                # z = z + self.actionBiases[y] # TODO - REMOVED HERE BIAS IN ENCODER
-                z = z[None]  # sequence of size 1
+                z = z[None]  # sequence of size 1  #
 
         timequeries = torch.zeros(nframes, bs, latent_dim, device=z.device)
         
@@ -205,10 +190,7 @@ class Decoder_TRANSFORMER(nn.Module):
             timequeries = self.sequence_pos_encoder(timequeries, mask, lengths)
         else:
             timequeries = self.sequence_pos_encoder(timequeries)
-
-        if self.normalize_decoder_input:
-            z = z / torch.norm(z, dim=-1, keepdim=True)
-
+        
         output = self.seqTransDecoder(tgt=timequeries, memory=z,
                                       tgt_key_padding_mask=~mask)
         

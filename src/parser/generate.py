@@ -1,6 +1,6 @@
 import os
 
-from src.models.get_model import JOINTSTYPES
+from src.models.tools.jointstypes import JOINTSTYPES
 from .base import ArgumentParser, add_cuda_options, adding_cuda
 from .tools import load_args
 

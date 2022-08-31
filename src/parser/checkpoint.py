@@ -67,6 +67,8 @@ def construct_checkpointname(parameters, folder):
         implist.append("sampling_{}".format(parameters["sampling"]))
         if parameters["sampling"] == "conseq":
             implist.append("samplingstep_{}".format(parameters["sampling_step"]))
+    if "lambda_kl" in parameters:
+        implist.append("kl_{:.0e}".format(float(parameters["lambda_kl"])))
 
     if "activation" in parameters:
         act = parameters["activation"]

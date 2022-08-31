@@ -1,5 +1,9 @@
 from .amass import AMASS
 
+def get_dataset(name="amass"):
+    return AMASS
+
+
 def get_datasets(parameters, clip_preprocess, split="train"):
     DATA = AMASS
 
@@ -24,8 +28,5 @@ def get_datasets(parameters, clip_preprocess, split="train"):
 
     datasets = {"train": train,
                 "test": test}
-
-    # # add specific parameters from the dataset loading
-    # dataset.update_parameters(parameters)
 
     return datasets

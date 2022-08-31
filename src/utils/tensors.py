@@ -39,8 +39,6 @@ def collate(batch):
     lenbatchTensor = torch.as_tensor(lenbatch)
     maskbatchTensor = lengths_to_mask(lenbatchTensor)
 
-    # actionlabelbatch = [b[2] for b in batch]
-    # actionlabelbatchTensor = np.asarray(actionlabelbatch) #torch.as_tensor(actionlabelbatch)
 
     out_batch = {"x": databatchTensor, "y": labelbatchTensor,
              "mask": maskbatchTensor, "lengths": lenbatchTensor}
@@ -56,10 +54,6 @@ def collate(batch):
     if 'clip_path' in notnone_batches[0]:
         textbatch = [b['clip_path'] for b in notnone_batches]
         out_batch.update({'clip_path': textbatch})
-
-    if 'clip_images_emb' in notnone_batches[0]:
-        clip_images_emb = torch.as_tensor([b['clip_images_emb'] for b in notnone_batches]).squeeze().float()
-        out_batch.update({'clip_images_emb': clip_images_emb})
 
     if 'all_categories' in notnone_batches[0]:
         textbatch = [b['all_categories'] for b in notnone_batches]

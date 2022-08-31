@@ -1,14 +1,14 @@
 import random
-
 import numpy as np
 import torch
-from src.utils.action_label_to_idx import action_label_to_idx
+from .tools import parse_info_name
 from ..utils.tensors import collate
 from ..utils.misc import to_torch
 import src.utils.rotation_conversions as geometry
-UNSUPERVISED_BABEL_ACTION_CAT_LABELS_IDXS = [48, 50, 28, 38, 52, 11, 29, 19, 51, 22, 14, 21, 26, 10, 24]
 
 POSE_REPS = ["xyz", "rotvec", "rotmat", "rotquat", "rot6d"]
+UNSUPERVISED_BABEL_ACTION_CAT_LABELS_IDXS = [48, 50, 28, 38, 52, 11, 29, 19, 51, 22, 14, 21, 26, 10, 24]
+from src.utils.action_label_to_idx import action_label_to_idx
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -25,7 +25,6 @@ class Dataset(torch.utils.data.Dataset):
         self.min_len = min_len
         self.num_seq_max = num_seq_max
 
-        self.align_pose_frontview = kwargs.get('align_pose_frontview', False)
         self.use_action_cat_as_text_labels = kwargs.get('use_action_cat_as_text_labels', False)
         self.only_60_classes = kwargs.get('only_60_classes', False)
         self.leave_out_15_classes = kwargs.get('leave_out_15_classes', False)
@@ -39,16 +38,6 @@ class Dataset(torch.utils.data.Dataset):
         # to remove shuffling
         self._original_train = None
         self._original_test = None
-
-        # TBD
-        # self._actions
-        # self._train/self._test
-        # self._num_frames_in_video[data_index]
-        # self._action_to_label[action]
-        # self._label_to_action[label]
-        # self._load_pose(data_index, frame_ix)
-        # self._actions[ind] # => carefull changed here
-        # self._action_classes[action]
 
     def action_to_label(self, action):
         return self._action_to_label[action]
@@ -70,10 +59,6 @@ class Dataset(torch.utils.data.Dataset):
         clip_image = self._clip_images[ind]
         return clip_image
 
-    def get_clip_image_emb(self, ind):
-        clip_image = self._clip_images_emb[ind]
-        return clip_image
-
     def get_clip_path(self, ind):
         clip_path = self._clip_pathes[ind]
         return clip_path
@@ -89,6 +74,13 @@ class Dataset(torch.utils.data.Dataset):
     def get_label(self, ind):
         action = self.get_action(ind)
         return self.action_to_label(action)
+
+    def parse_action(self, path, return_int=True):
+        info = parse_info_name(path)["A"]
+        if return_int:
+            return int(info)
+        else:
+            return info
 
     def get_action(self, ind):
         return self._actions[ind]
@@ -106,8 +98,6 @@ class Dataset(torch.utils.data.Dataset):
         else:
             data_index = self._test[index]
 
-        # inp, target = self._get_item_data_index(data_index)
-        # return inp, target
         return self._get_item_data_index(data_index)
 
     def _load(self, ind, frame_ix):
@@ -136,18 +126,6 @@ class Dataset(torch.utils.data.Dataset):
                 if not self.glob:
                     pose = pose[:, 1:, :]
                 pose = to_torch(pose)
-                if self.align_pose_frontview:
-                    first_frame_root_pose_matrix = geometry.axis_angle_to_matrix(pose[0][0])
-                    all_root_poses_matrix = geometry.axis_angle_to_matrix(pose[:, 0, :])
-                    aligned_root_poses_matrix = torch.matmul(torch.transpose(first_frame_root_pose_matrix, 0, 1),
-                                                             all_root_poses_matrix)
-                    pose[:, 0, :] = geometry.matrix_to_axis_angle(aligned_root_poses_matrix)
-
-                    if self.translation:
-                        ret_tr = torch.matmul(torch.transpose(first_frame_root_pose_matrix, 0, 1).float(),
-                                              torch.transpose(ret_tr, 0, 1))
-                        ret_tr = torch.transpose(ret_tr, 0, 1)
-
                 if pose_rep == "rotvec":
                     ret = pose
                 elif pose_rep == "rotmat":
@@ -232,13 +210,9 @@ class Dataset(torch.utils.data.Dataset):
 
         inp, target = self.get_pose_data(data_index, frame_ix)
 
-
         output = {'inp': inp, 'target': target}
         if hasattr(self, 'db') and 'clip_images' in self.db.keys():
             output['clip_image'] = self.get_clip_image(data_index)
-
-        if hasattr(self, 'db') and 'clip_images_emb' in self.db.keys():
-            output['clip_images_emb'] = self.get_clip_image_emb(data_index)
 
         if hasattr(self, 'db') and 'clip_pathes' in self.db.keys():
             output['clip_path'] = self.get_clip_path(data_index)
@@ -269,7 +243,9 @@ class Dataset(torch.utils.data.Dataset):
             choosen_cat = np.random.choice(all_valid_cats, size=1)[0]
             # Replace clip text
             output['clip_text'] = choosen_cat
+            output['y'] = action_label_to_idx[choosen_cat]
             output['all_categories'] = all_valid_cats
+
         return output
 
     def get_label_sample(self, label, n=1, return_labels=False, return_index=False):
@@ -281,16 +257,39 @@ class Dataset(torch.utils.data.Dataset):
         action = self.label_to_action(label)
         choices = np.argwhere(np.array(self._actions)[index] == action).squeeze(1)
 
-        if n == 1:
-            data_index = index[np.random.choice(choices)]
-            data = self._get_item_data_index(data_index)
-            x, y = data['inp'], data['target']
-            assert (label == y)
-            y = label
+        if self.dataname == 'amass':
+            if n == 1:
+                while True:
+                    idx = np.random.randint(0, len(self))
+                    data = self._get_item_data_index(idx)
+                    if data is None:
+                        continue
+                    x, y = data['inp'], data['target']
+                    if y == label:
+                        break
+            else:
+                x = []
+                data_index = []
+                while len(x) < n:
+                    idx = np.random.randint(0, len(self))
+                    data = self._get_item_data_index(idx)
+                    x_inp, y = data['inp'], data['target']
+                    if y == label:
+                        x.append(x_inp)
+                        data_index.append(idx)
+                x = np.stack(x)
+                y = label * np.ones(n, dtype=int)
         else:
-            data_index = np.random.choice(choices, n)
-            x = np.stack([self._get_item_data_index(index[di])['inp'] for di in data_index])
-            y = label * np.ones(n, dtype=int)
+            if n == 1:
+                data_index = index[np.random.choice(choices)]
+                data = self._get_item_data_index(data_index)
+                x, y = data['inp'], data['target']
+                assert (label == y)
+                y = label
+            else:
+                data_index = np.random.choice(choices, n)
+                x = np.stack([self._get_item_data_index(index[di])['inp'] for di in data_index])
+                y = label * np.ones(n, dtype=int)
         if return_labels:
             if return_index:
                 return x, y, data_index
@@ -364,14 +363,13 @@ class Dataset(torch.utils.data.Dataset):
         return f"{self.dataname} dataset: ({len(self)}, _, ..)"
 
     def update_parameters(self, parameters):
-        for i in range(self.__len__()):
-            inp = self[i]
-            if inp is not None and inp['inp'] is not None:
-                self.njoints, self.nfeats, _ = inp['inp'].shape
-                parameters["num_classes"] = self.num_classes
-                parameters["nfeats"] = self.nfeats
-                parameters["njoints"] = self.njoints
+        for i in range(len(self)):
+            if self[i] is not None:
+                self.njoints, self.nfeats, _ = self[i]['inp'].shape
                 break
+        parameters["num_classes"] = self.num_classes
+        parameters["nfeats"] = self.nfeats
+        parameters["njoints"] = self.njoints
 
     def shuffle(self):
         if self.split == 'train':
@@ -390,4 +388,3 @@ class Dataset(torch.utils.data.Dataset):
                 self._original_test = self._test
             else:
                 self._test = self._original_test
-

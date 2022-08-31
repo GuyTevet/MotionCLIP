@@ -85,18 +85,15 @@ from .dataset import Dataset
 from src.config import ROT_CONVENTION_TO_ROT_NUMBER
 from src import config
 from PIL import Image
-from tqdm import tqdm
-
 import sys
-sys.path.append('.')
+
+sys.path.append('')
 
 # action2motion_joints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 21, 24, 38]
 # change 0 and 8
 action2motion_joints = [8, 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 21, 24, 38]  # [18,]
 
-amass_action_enumerator = {
-    0: "dummy class",
-}
+from src.utils.action_label_to_idx import action_label_to_idx, idx_to_action_label
 
 
 def get_z(cam_s, cam_pos, joints, img_size, flength):
@@ -139,13 +136,14 @@ def get_trans_from_vibe(vibe, use_z=True):
 class AMASS(Dataset):
     dataname = "amass"
 
-    # def __init__(self, datapath="data/amass_for_actor_db.pt", split="train", use_z=1, **kwargs):
     def __init__(self, datapath="data/amass/amass_30fps_legacy_db.pt", split="train", use_z=1, **kwargs):
         assert '_db.pt' in datapath
         self.datapath = datapath.replace('_db.pt', '_{}.pt'.format(split))
-        print('datapath used by amass is [{}]'.format(self.datapath))
         assert os.path.exists(self.datapath)
+        print('datapath used by amass is [{}]'.format(self.datapath))
         super().__init__(**kwargs)
+
+        self.dataname = "amass"
 
         # FIXME - hardcoded:
         self.rot_convention = 'legacy'
@@ -155,20 +153,12 @@ class AMASS(Dataset):
         if 'clip_preprocess' in kwargs.keys():
             self.clip_preprocess = kwargs['clip_preprocess']
 
-        # motion_desc_file = "ntu_vibe_list.txt"
         self.use_z = (use_z != 0)
 
         # keep_actions = [6, 7, 8, 9, 22, 23, 24, 38, 80, 93, 99, 100, 102]
         dummy_class = [0]
         genders = config.GENDERS
-        # self.num_classes = len(keep_actions)
         self.num_classes = len(dummy_class)
-
-        # candi_list = []
-        # candi_list_desc_name = os.path.join(datapath, motion_desc_file)
-        # with cs.open(candi_list_desc_name, 'r', 'utf-8') as f:
-        #     for line in f.readlines():
-        #         candi_list.append(line.strip())
 
         self.db = self.load_db()
         self._joints3d = []
@@ -180,7 +170,6 @@ class AMASS(Dataset):
         self._heights = []
         self._masses = []
         self._clip_images = []
-        self._clip_images_emb = []
         self._clip_texts = []
         self._clip_pathes = []
         self._actions_cat = []
@@ -189,17 +178,14 @@ class AMASS(Dataset):
         seq_len = 100
         n_sequences = len(self.db['thetas'])
         # split sequences
-        for seq_idx in tqdm(range(n_sequences)):
-            if seq_idx == 0:
-                continue
+        for seq_idx in range(n_sequences):
             n_sub_seq = self.db['thetas'][seq_idx].shape[0] // seq_len
             if n_sub_seq == 0: continue
             n_frames_in_use = n_sub_seq * seq_len
             joints3d = np.split(self.db['joints3d'][seq_idx][:n_frames_in_use], n_sub_seq)
-            thetas = np.split(self.db['thetas'][seq_idx][:n_frames_in_use], n_sub_seq)
-
+            poses = np.split(self.db['thetas'][seq_idx][:n_frames_in_use], n_sub_seq)
             self._joints3d.extend(joints3d)
-            self._poses.extend(thetas)
+            self._poses.extend(poses)
             self._num_frames_in_video.extend([seq_len] * n_sub_seq)
 
             if 'action_cat' in self.db:
@@ -224,7 +210,10 @@ class AMASS(Dataset):
             if 'clip_images_emb' in self.db.keys():
                 self._clip_images_emb.extend(np.split(self.db['clip_images_emb'][seq_idx][:n_sub_seq], n_sub_seq))
 
-            self._actions.extend([0] * n_sub_seq)
+
+
+            actions = [0] * n_sub_seq
+            self._actions.extend(actions)
 
         assert len(self._num_frames_in_video) == len(self._poses) == len(self._joints3d) == len(self._actions)
         if self.use_betas:
@@ -233,29 +222,6 @@ class AMASS(Dataset):
             assert len(self._poses) == len(self._genders)
         if 'clip_images' in self.db.keys():
             assert len(self._poses) == len(self._clip_images)
-        if 'clip_images_emb' in self.db.keys():
-            assert len(self._poses) == len(self._clip_images_emb)
-
-        # for path in candi_list:
-        #     data_org = joblib.load(os.path.join(datapath, path))
-        #     try:
-        #         vibe_data = data_org[1]
-        #         data_pose = vibe_data["pose"]
-        #         # invert joint 0 and 8 already done in the definition of joints
-        #         data_j3d = vibe_data["joints3d"][:, action2motion_joints]
-        #         # initial pose at origin: on dataset.load()
-        #
-        #         # estimate 3d translations
-        #         globtrans = get_trans_from_vibe(vibe_data, use_z=self.use_z)
-        #         data_j3d = data_j3d + globtrans[:, None]
-        #     except KeyError:
-        #         continue
-        #     action_id = int(path[path.index('A') + 1:-4])
-        #
-        #     self._poses.append(data_pose)
-        #     self._joints3d.append(data_j3d)
-        #     self._actions.append(action_id)
-        #     self._num_frames_in_video.append(data_pose.shape[0])
 
         self._actions = np.array(self._actions)
         self._num_frames_in_video = np.array(self._num_frames_in_video)
@@ -271,7 +237,7 @@ class AMASS(Dataset):
         self._gender_to_label = {x: i for i, x in enumerate(genders)}
         self._label_to_gender = {i: x for i, x in enumerate(genders)}
 
-        self._action_classes = amass_action_enumerator
+        self._action_classes = idx_to_action_label
 
     def load_db(self):
         # Load amass dataset encoded to a .db file

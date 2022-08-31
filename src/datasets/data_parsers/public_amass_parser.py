@@ -27,7 +27,7 @@ sys.path.append('.')
 import torch
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
 from human_body_prior.body_model.body_model import BodyModel
-from src.datasets import smpl_utils
+from src.datasets.data_parsers import smpl_utils
 from src import config
 import numpy as np
 from PIL import Image
@@ -36,6 +36,7 @@ comp_device = torch.device("cpu")
 
 dict_keys = ['betas', 'dmpls', 'gender', 'mocap_framerate', 'poses', 'trans']
 action2motion_joints = [8, 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 21, 24, 38]  # [18,]
+
 
 def get_joints_to_use(args):
     joints_to_use = np.array([
@@ -66,14 +67,14 @@ all_sequences = [
 ]
 amass_test_split = ['Transitions_mocap', 'SSM_synced']
 amass_vald_split = ['HumanEva', 'MPI_HDM05', 'SFU', 'MPI_mosh']
-amass_train_split = ['CMU', 'MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'KIT', 'BioMotionLab_NTroje', 'EKUT', 'TCD_handMocap', 'ACCAD']
+amass_train_split = ['BioMotionLab_NTroje', 'Eyes_Japan_Dataset', 'TotalCapture', 'KIT', 'ACCAD', 'CMU', 'MPI_Limits',
+                     'TCD_handMocap', 'EKUT']
 # Source - https://github.com/nghorbani/amass/blob/08ca36ce9b37969f72d7251eb61564a7fd421e15/src/amass/data/prepare_data.py#L235
 amass_splits = {
     'test': amass_test_split,
     'vald': amass_vald_split,
     'train': amass_train_split
 }
-amass_splits['train'] = list(set(amass_splits['train']).difference(set(amass_splits['test'] + amass_splits['vald'])))  # no change - just making sure
 assert len(amass_splits['train'] + amass_splits['test'] + amass_splits['vald']) == len(all_sequences) == 15
 
 def read_data(folder, split_name,dataset_name, target_fps, max_fps_dist, joints_to_use, quick_run,babel_labels, clip_images_dir=None):
@@ -283,7 +284,7 @@ if __name__ == '__main__':
     parser.add_argument('--clip_images_dir', type=str, help='dataset directory', default='./data/render')
     parser.add_argument('--target_fps', type=int, choices=[10, 30, 60], default=30)
     parser.add_argument('--quick_run', action='store_true', help='quick_run wo saving and modeling 3d positions with smpl, just for debug')
-    parser.add_argument('--dataset_name',required=True, type=str, choices=['amass', 'babel'],
+    parser.add_argument('--dataset_name',required=True, type=str, choices=['amass', 'babel'], default='amass',
                         help='choose which dataset you want to create')
     parser.add_argument('--babel_dir', type=str, help='path to processed BABEL downloaded dir BABEL file',
                         default='./data/babel_v1.0_release')
@@ -322,5 +323,4 @@ if __name__ == '__main__':
         else:
             print(f'Saving AMASS dataset to {db_file}')
             joblib.dump(db, db_file)
-
 

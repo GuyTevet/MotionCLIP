@@ -36,18 +36,19 @@ def do_epochs(model, datasets, parameters, optimizer, writer):
                 checkpoint_path = os.path.join(parameters["folder"],
                                                'checkpoint_{:04d}.pth.tar'.format(epoch))
                 print('Saving checkpoint {}'.format(checkpoint_path))
-                state_dict_wo_clip = {k: v for k,v in model.state_dict().items() if not k.startswith('clip_model.')}
+                if parameters.get('clip_training', '') == '':
+                    state_dict_wo_clip = {k: v for k,v in model.state_dict().items() if not k.startswith('clip_model.')}
+                else:
+                    state_dict_wo_clip = model.state_dict()
                 torch.save(state_dict_wo_clip, checkpoint_path)
 
             writer.flush()
 
 
 if __name__ == '__main__':
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "4"
-
     # parse options
     parameters = parser()
-    # parameters["device"] = "cuda:"
+
     # logging tensorboard
     writer = SummaryWriter(log_dir=parameters["folder"])
 
@@ -59,11 +60,6 @@ if __name__ == '__main__':
 
     print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters()) / 1000000.0))
     print("Training model..")
-
-    # if device == "cpu":
-    #     clip_model.float()
-    # else:
-    #     clip.model.convert_weights(clip_model)  # Actually this line is unnecessary since clip by default already on float16
 
     do_epochs(model, datasets, parameters, optimizer, writer)
 

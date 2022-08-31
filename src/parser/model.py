@@ -1,4 +1,5 @@
-from src.models.get_model import LOSSES, JOINTSTYPES
+from src.models.get_model import LOSSES
+from src.models.tools.jointstypes import JOINTSTYPES
 
 
 def add_model_options(parser):
@@ -30,12 +31,8 @@ def add_model_options(parser):
     group.add_argument("--clip_lambda_ce", default=1.0, type=float, help="weight of the CROSS-ENTROPY loss, for both texts and images, if in use.")
     group.add_argument("--clip_lambda_cosine", default=1.0, type=float, help="weight of the Cosine-dist loss, for both texts and images, if in use.")
 
-    group.add_argument("--normalize_encoder_output", action='store_true', help="Choose if normalize the outputs of the encoder during forward")
-
-    group.add_argument("--normalize_decoder_input", action='store_true',
-                       help="Choose if normalize the input of the encoder during forward")
-    group.add_argument("--use_generation_losses", action='store_true', help="Generate during training")
-
+    group.add_argument("--clip_training", default='', type=str, help="pass something here to train clip")
+    group.add_argument("--clip_layers", default=12, type=int, help="# of CLIP layers to use")
 
 
 def parse_modelname(modelname):

@@ -150,3 +150,6 @@ action_label_to_idx = {
     "hang": 148,
     "flail arms": 149
 }
+idx_to_action_label = {}
+for key, value in action_label_to_idx.items():
+    idx_to_action_label[value] = key

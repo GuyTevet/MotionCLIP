@@ -27,7 +27,7 @@ sys.path.append('.')
 import torch
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
 from human_body_prior.body_model.body_model import BodyModel
-from src.datasets.data_parsers import smpl_utils
+from src.datasets import smpl_utils
 from src import config
 import numpy as np
 from PIL import Image

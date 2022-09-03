@@ -18,6 +18,12 @@ year={2022}
 }
 ```
 
+## Updates
+
+**31/AUG/22** - Training loop reproduces paper results. (a bug fix)
+
+**11/MAY/22** - First release.
+
 ## Getting started
 ### 1. Create conda environment
 
@@ -108,9 +114,9 @@ python -m src.utils.action_classifier ./exps/classes-model/checkpoint_0200.pth.t
 
 ## Train your own
 
-**NOTE (11/MAY/22):** 
+~~**NOTE (11/MAY/22):** 
 The paper model is not perfectly reproduced using this code. We are working to resolve this issue. 
-The trained model [checkpoint](https://drive.google.com/file/d/1VTIN0kJd2-0NW1sKckKgXddwl4tFZVDp/view?usp=sharing) we provide does reproduce results.
+The trained model [checkpoint](https://drive.google.com/file/d/1VTIN0kJd2-0NW1sKckKgXddwl4tFZVDp/view?usp=sharing) we provide does reproduce results.~~ **(Resolved 31/AUG/22)**
 
 To reproduce `paper-model` run:
 ```bash

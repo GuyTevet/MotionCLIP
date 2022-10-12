@@ -41,13 +41,6 @@ def train_or_test(model, optimizer, iterator, device, mode="train"):
 
             mixed_loss, losses = model.compute_loss(batch)
 
-            # Dump batch losses
-            for key, value in losses.items():
-                if key in batch_losses_dict:
-                    batch_losses_dict[key].append(value)
-                else:
-                    batch_losses_dict[key] = [value]
-
             if i == 0:
                 dict_loss = deepcopy(losses)
             else:

@@ -284,7 +284,7 @@ if __name__ == '__main__':
     parser.add_argument('--clip_images_dir', type=str, help='dataset directory', default='./data/render')
     parser.add_argument('--target_fps', type=int, choices=[10, 30, 60], default=30)
     parser.add_argument('--quick_run', action='store_true', help='quick_run wo saving and modeling 3d positions with smpl, just for debug')
-    parser.add_argument('--dataset_name',required=True, type=str, choices=['amass', 'babel'], default='amass',
+    parser.add_argument('--dataset_name', required=True, type=str, choices=['amass', 'babel'], default='amass',
                         help='choose which dataset you want to create')
     parser.add_argument('--babel_dir', type=str, help='path to processed BABEL downloaded dir BABEL file',
                         default='./data/babel_v1.0_release')

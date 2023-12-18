@@ -36,22 +36,19 @@ The code was tested on Python 3.8 and PyTorch 1.8.1.
 
 ### 2. Download data
 
-Download and unzip the above datasets and place them correspondingly:
+**NEW! Download the parsed data directly**
+
+[Parsed AMASS dataset](https://drive.google.com/drive/folders/18guyyud1iobxASZxoGe-798mOxNBKGWf?usp=sharing) -> `./data/amass_db`
+
+<details>
+  <summary><b>If you prefer to parse the data yourself, follow this:</b></summary>
+
+  Download and unzip the above datasets and place them correspondingly:
 * [AMASS](https://amass.is.tue.mpg.de/) -> `./data/amass` (Download the SMPL+H version for each dataset separately, please note to download ALL the dataset in AMASS website)
 * [BABEL](https://babel.is.tue.mpg.de/) -> `./data/babel_v1.0_release`
 * [Rendered AMASS images](https://drive.google.com/file/d/1F8VLY4AC2XPaV3DqKZefQJNWn4KY2z_c/view?usp=sharing) -> `./data/render`
 
-### 3. Download the SMPL body model
-
-```bash
-bash prepare/download_smpl_files.sh
-```
-This will download the SMPL neutral model from this [**github repo**](https://github.com/classner/up/blob/master/models/3D/basicModel_neutral_lbs_10_207_0_v1.0.0.pkl) and additionnal files.
-
-In addition, download the **Extended SMPL+H model** (used in AMASS project) from [MANO](https://mano.is.tue.mpg.de/), and place it in `./models/smplh`.
-
-### 4. Parse data
-Process the three datasets into a unified dataset with `(text, image, motion)` triplets.
+  Then, process the three datasets into a unified dataset with `(text, image, motion)` triplets:
 
 To parse acording to the AMASS split (for all applications except action recognition), run:
 ```bash
@@ -62,6 +59,19 @@ python -m src.datasets.amass_parser --dataset_name amass
 ```bash
 python -m src.datasets.amass_parser --dataset_name babel
 ```
+
+</details>
+
+
+### 3. Download the SMPL body model
+
+```bash
+bash prepare/download_smpl_files.sh
+```
+This will download the SMPL neutral model from this [**github repo**](https://github.com/classner/up/blob/master/models/3D/basicModel_neutral_lbs_10_207_0_v1.0.0.pkl) and additionnal files.
+
+In addition, download the **Extended SMPL+H model** (used in AMASS project) from [MANO](https://mano.is.tue.mpg.de/), and place it in `./models/smplh`.
+
 
 ## Using the pretrained model
 
